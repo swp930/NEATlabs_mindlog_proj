@@ -10,6 +10,12 @@
     <h3>Median - 0</h3>
 
     <script src="https://d3js.org/d3.v4.js"></script>
+    <form action="/stats" enctype="multipart/form-data" method="post" id="upload_file_form">
+        <div class="form-group">
+            <input type="file" class="form-control-file" name="uploaded_file" id="uploaded_file">
+            <input type="submit" class="btn btn-default">
+        </div>
+    </form>
     <div id="my_dataviz"></div>
     <script src="/js/dashboard.js"></script>
     <!-- Create a div where the graph will take place -->

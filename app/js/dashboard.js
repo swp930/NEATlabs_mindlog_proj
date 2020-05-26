@@ -74,3 +74,33 @@ svg
         return (y(d))
     })
     .attr("stroke", "black")
+
+
+var uploadForm = document.getElementById("upload_file_form")
+uploadForm.addEventListener('submit', e => {
+    e.preventDefault()
+    console.log("Submitting")
+    var files = document.getElementById('uploaded_file').files;
+    console.log(files)
+    const formData = new FormData();
+    for (let i = 0; i < files.length; i++) {
+        let file = files[i]
+
+        formData.append('uploaded_file', file)
+    }
+    var url = '/stats'
+    console.log(formData.keys())
+    fetch(url, {
+        method: 'POST',
+        body: formData,
+    }).then(response => {
+        var reader = response.body.getReader()
+        reader.read().then(function processText({ done, value }) {
+            console.log(done)
+            console.log(value)
+            var string = new TextDecoder("utf-8").decode(value);
+            var resp = JSON.parse(string)
+            console.log(resp)
+        })
+    })
+})
