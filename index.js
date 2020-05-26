@@ -18,38 +18,81 @@ var storage = multer.diskStorage({
 });
 var upload = multer({ storage: storage });
 
-var buf = fs.readFileSync("app/uploads/ucsd12.xlsx");
-var wb = XLSX.read(buf, { type: 'buffer' });
-var headersMean = Object.keys(wb.Sheets.weekly_summary).filter(x => {
-    var regex = /[\A-Za-z]*([\d]*)/
-    var tmp = x.match(regex)
-    if (tmp[1]) {
-        if (tmp[1] === "1") {
-            if (wb.Sheets.weekly_summary[x]) {
-                if (wb.Sheets.weekly_summary[x].v) {
-                    return wb.Sheets.weekly_summary[x].v.indexOf("Mean") >= 0
+function extractDataFromExcel(path) {
+    //var buf = fs.readFileSync("app/uploads/ucsd12.xlsx");
+    var buf = fs.readFileSync(path);
+    var wb = XLSX.read(buf, { type: 'buffer' });
+
+    var weeks = ["1", "2", "3", "4"]
+    var validBoxes = Object.keys(wb.Sheets.weekly_summary)
+    var headers = {}
+    for (var i = 0; i < weeks.length; i++) {
+        var weekNum = weeks[i]
+        var header1 = "Week " + weekNum + " Mean-0"
+        var header2 = "Week " + weekNum + " Mean-1"
+        var header3 = "Week " + weekNum + " STD-0"
+        var header4 = "Week " + weekNum + " STD-1"
+        var header5 = "Week " + weekNum + " Whitney U"
+        headers[header1] = true
+        headers[header2] = true
+        headers[header3] = true
+        headers[header4] = true
+        headers[header5] = true
+    }
+    var headersToBox = {}
+    for (var i = 0; i < validBoxes.length; i++) {
+        var x = validBoxes[i]
+        var regex = /[\A-Za-z]*([\d]*)/
+        var tmp = x.match(regex)
+        if (tmp[1]) {
+            if (tmp[1] === "1") {
+                if (wb.Sheets.weekly_summary[x]) {
+                    if (wb.Sheets.weekly_summary[x].v) {
+                        var headerName = wb.Sheets.weekly_summary[x].v
+                        if (headers[headerName]) {
+                            headersToBox[headerName] = x
+                        }
+                    }
                 }
             }
         }
     }
-    return false
-})
-var headersStd = Object.keys(wb.Sheets.weekly_summary).filter(x => {
-    var regex = /[\A-Za-z]*([\d]*)/
-    var tmp = x.match(regex)
-    if (tmp[1]) {
-        if (tmp[1] === "1") {
-            if (wb.Sheets.weekly_summary[x]) {
-                if (wb.Sheets.weekly_summary[x].v) {
-                    return wb.Sheets.weekly_summary[x].v.indexOf("STD") >= 0
+    var validHeaders = Object.keys(headersToBox)
+    console.log(validHeaders)
+    console.log(headersToBox)
+    var data = {}
+    for (var i = 0; i < validHeaders.length; i++) {
+        var currHead = headersToBox[validHeaders[i]]
+        console.log(currHead)
+        var regex = /([\A-Za-z]*)[\d]*/
+        var tmp = currHead.match(regex)
+        if (tmp[1]) {
+            var alpha = tmp[1]
+            console.log(alpha)
+            data[validHeaders[i]] = []
+            for (var j = 2; j <= 26; j++) {
+                var boxName = alpha + j
+                if (wb.Sheets.weekly_summary[boxName]) {
+                    var dataVal = wb.Sheets.weekly_summary[boxName].v
+                    data[validHeaders[i]].push(dataVal)
                 }
             }
         }
     }
-    return false
-})
-console.log(headersMean)
-console.log(headersStd)
+    console.log(data)
+
+    var variableNames = [
+        "prev_night_sleep", "ppg_std", "cumm_step_distance", "cumm_step_speed", "curr_step_speed", "cumm_step_calorie", "fats",
+        "cumm_step_count", "heart_rate", "MeanBreathingTime", "Consistency", "sugars", "past_day_fats", "time_of_day",
+        "exercise_calorie", "curr_step_count", "exercise_duration", "past_day_sugars", "curr_step_calorie", "curr_step_distance",
+        "past_day_caffeine", "caffeine", "noise", "distracted", "Speed"
+    ]
+    var body = {
+        "data": data,
+        "variableNames": variableNames
+    }
+    return body
+}
 
 app.use(express.static(__dirname + '/app'))
 
@@ -64,7 +107,19 @@ app.post('/stats', upload.single('uploaded_file'), function(req, res) {
     // req.file is the name of your file in the form above, here 'uploaded_file'
     // req.body will hold the text fields, if there were any 
     console.log(req.file, req.body)
-    res.send({ "completed": true })
+    res.send({
+        "completed": true,
+        "path": req.file.path
+    })
 });
+
+app.get('/getDataFromSheet', function(req, res) {
+    var path = req.query.path
+    if (path) {
+        res.send(extractDataFromExcel(path))
+    } else {
+        res.send({})
+    }
+})
 
 app.listen(port, () => { console.log("Running on port:", port) })
