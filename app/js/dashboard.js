@@ -3,27 +3,22 @@ var margin = {
         top: 10,
         right: 30,
         bottom: 30,
-        left: 40
+        left: 50
     },
     width = 460 - margin.left - margin.right,
     height = 400 - margin.top - margin.bottom;
 
 // append the svg object to the body of the page
-var svg = d3.select("#my_dataviz")
-    .append("svg")
-    .attr("width", width + margin.left + margin.right)
-    .attr("height", height + margin.top + margin.bottom)
-    .append("g")
-    .attr("transform",
-        "translate(" + margin.left + "," + margin.top + ")");
 
-// Read the data and compute summary statistics for each specie
-d3.csv("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/iris.csv", function(data) {
-    //constructFromData(data)
-})
-
-function constructFromData(data) {
-    console.log(data)
+function constructFromData(data, week) {
+    document.getElementById(week).innerHTML = ""
+    var svg = d3.select("#" + week)
+        .append("svg")
+        .attr("width", width + margin.left + margin.right)
+        .attr("height", height + margin.top + margin.bottom)
+        .append("g")
+        .attr("transform",
+            "translate(" + margin.left + "," + margin.top + ")");
 
     var bottomDomain = Number.MAX_SAFE_INTEGER
     var upperDomain = Number.MIN_SAFE_INTEGER
@@ -32,11 +27,9 @@ function constructFromData(data) {
         .key(function(d) {
             // Data specific, would change this to Mean-0 or Mean-1, can have it be meanType, how data is sampled
             //return d.Species;
-            console.log(d.DataType)
             return d.DataType
         })
         .rollup(function(d) {
-            console.log(d)
             q1 = d[0].Mean - d[0].STD
             median = d[0].Mean
             q3 = d[0].Mean + d[0].STD
@@ -71,6 +64,15 @@ function constructFromData(data) {
         .domain([bottomDomain - 1, upperDomain + 1])
         .range([height, 0])
     svg.append("g").call(d3.axisLeft(y))
+
+    // add a title
+    svg.append("text")
+        .attr("x", (width / 2))
+        .attr("y", 0 + (margin.top / 2))
+        .attr("text-anchor", "middle")
+        .style("font-size", "18px")
+        //.style("text-decoration", "underline")  
+        .text(week);
 
     // Show the main vertical line
     svg
@@ -135,7 +137,7 @@ function constructFromData(data) {
         .style("width", 80)
 }
 
-
+var totalData
 
 var uploadForm = document.getElementById("upload_file_form")
 uploadForm.addEventListener('submit', e => {
@@ -156,25 +158,61 @@ uploadForm.addEventListener('submit', e => {
         reader.read().then(function processText({ done, value }) {
             var string = new TextDecoder("utf-8").decode(value);
             var resp = JSON.parse(string)
-            console.log(resp)
             var xhr = new XMLHttpRequest();
             var url = "/getDataFromSheet?path=" + resp.path
             xhr.open("GET", url, true);
             xhr.onreadystatechange = function() { // Call a function when the state changes.
                 if (this.readyState === XMLHttpRequest.DONE && this.status === 200) {
                     var response = JSON.parse(xhr.response)
-                    var meanZero = response.data["Week 1 Mean-0"][0]
-                    var meanOne = response.data["Week 1 Mean-1"][0]
-                    var stdZero = response.data["Week 1 STD-0"][0]
-                    var stdOne = response.data["Week 1 STD-1"][0]
-                    var dataOut = []
-                    dataOut.push({ "Mean": meanZero, "STD": stdZero, "DataType": "Mean-0" })
-                    dataOut.push({ "Mean": meanOne, "STD": stdOne, "DataType": "Mean-1" })
-                    console.log(dataOut)
-                    constructFromData(dataOut)
+                    totalData = response.data
+                    createGraphsForVariable(response.data, 19)
+                    var variables = document.getElementById("variables")
+                    variables.style.display = "inline-block"
+                    for (var i = 0; i < response.variableNames.length; i++) {
+                        var option = document.createElement("option")
+                        option.value = i
+                        option.innerHTML = response.variableNames[i]
+                        variables.appendChild(option)
+                    }
+                    variables.onchange = (event) => handleChange(event)
+
+                    //Mean: 34.23, STD: 334.1471815848238, DataType: "Mean-0"
                 }
             }
             xhr.send();
         })
     })
 })
+
+function createGraphsForVariable(dataFromExcel, varIndex) {
+    for (i = 1; i <= 4; i++) {
+        var meanHeaderZero = "Week " + i + " Mean-0"
+        var meanHeaderOne = "Week " + i + " Mean-1"
+        var stdHeaderZero = "Week " + i + " STD-0"
+        var stdHeaderOne = "Week " + i + " STD-1"
+        var stdZero, stdOne, meanZero, meanOne
+        if (dataFromExcel[meanHeaderZero] != null)
+            meanZero = dataFromExcel[meanHeaderZero][varIndex]
+        if (dataFromExcel[meanHeaderOne] != null)
+            meanOne = dataFromExcel[meanHeaderOne][varIndex]
+
+        if (dataFromExcel[stdHeaderZero] != null)
+            stdZero = dataFromExcel[stdHeaderZero][varIndex]
+        if (dataFromExcel[stdHeaderOne] != null)
+            stdOne = dataFromExcel[stdHeaderOne][varIndex]
+        var dataOut = []
+        if (meanZero != null && stdZero != null)
+            dataOut.push({ "Mean": meanZero, "STD": stdZero, "DataType": "Mean-0" })
+        if (meanOne != null && stdOne != null)
+            dataOut.push({ "Mean": meanOne, "STD": stdOne, "DataType": "Mean-1" })
+        console.log("week_" + i)
+        console.log(dataOut)
+        constructFromData(dataOut, "week_" + i)
+    }
+}
+
+function handleChange(event) {
+    console.log(event.srcElement.options.selectedIndex)
+    var selectedIndex = event.srcElement.options.selectedIndex
+    createGraphsForVariable(totalData, selectedIndex)
+}
