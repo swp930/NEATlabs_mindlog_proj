@@ -10,7 +10,7 @@ var margin = {
 
 // append the svg object to the body of the page
 
-function constructFromData(data, week) {
+function constructFromData(data, week, graphBottom, graphTop) {
     document.getElementById(week).innerHTML = ""
     var svg = d3.select("#" + week)
         .append("svg")
@@ -34,8 +34,11 @@ function constructFromData(data, week) {
             median = d[0].Mean
             q3 = d[0].Mean + d[0].STD
             interQuantileRange = q3 - q1
-            min = q1 - 1.5 * interQuantileRange
-            max = q3 + 1.5 * interQuantileRange
+                //min = q1 - 1.5 * interQuantileRange
+                //max = q3 + 1.5 * interQuantileRange
+            var dist = graphTop - graphBottom
+            min = graphBottom + (dist * 0.05)
+            max = graphTop - (dist * 0.05)
             bottomDomain = Math.min(bottomDomain, min)
             upperDomain = Math.max(upperDomain, max)
             return ({
@@ -60,8 +63,10 @@ function constructFromData(data, week) {
         .call(d3.axisBottom(x))
 
     // Show the Y scale
+    console.log(graphBottom)
+    console.log(graphTop)
     var y = d3.scaleLinear()
-        .domain([bottomDomain - 1, upperDomain + 1])
+        .domain([graphBottom - 1, graphTop + 1])
         .range([height, 0])
     svg.append("g").call(d3.axisLeft(y))
 
@@ -185,7 +190,40 @@ uploadForm.addEventListener('submit', e => {
 })
 
 function createGraphsForVariable(dataFromExcel, varIndex) {
-    for (i = 1; i <= 4; i++) {
+    var boundaryBottom = Number.MAX_SAFE_INTEGER,
+        boundaryTop = Number.MIN_SAFE_INTEGER
+    for (var j = 1; j <= 4; j++) {
+        var meanHeaderZero = "Week " + j + " Mean-0"
+        var meanHeaderOne = "Week " + j + " Mean-1"
+        var stdHeaderZero = "Week " + j + " STD-0"
+        var stdHeaderOne = "Week " + j + " STD-1"
+        var stdZero, stdOne, meanZero, meanOne
+        if (dataFromExcel[meanHeaderZero] != null)
+            meanZero = dataFromExcel[meanHeaderZero][varIndex]
+        if (dataFromExcel[meanHeaderOne] != null)
+            meanOne = dataFromExcel[meanHeaderOne][varIndex]
+        if (dataFromExcel[stdHeaderZero] != null)
+            stdZero = dataFromExcel[stdHeaderZero][varIndex]
+        if (dataFromExcel[stdHeaderOne] != null)
+            stdOne = dataFromExcel[stdHeaderOne][varIndex]
+        if (meanZero != null && stdZero != null) {
+            var tmpMin = meanZero - 1.5 * stdZero
+            var tmpMax = meanZero + 1.5 * stdZero
+            boundaryBottom = Math.min(tmpMin, boundaryBottom)
+            boundaryTop = Math.max(tmpMax, boundaryTop)
+        }
+        if (meanOne != null && stdOne != null) {
+            var tmpMin = meanOne - 1.5 * stdOne
+            var tmpMax = meanOne + 1.5 * stdOne
+            boundaryBottom = Math.min(tmpMin, boundaryBottom)
+            boundaryTop = Math.max(tmpMax, boundaryTop)
+        }
+    }
+
+    console.log(boundaryBottom)
+    console.log(boundaryTop)
+
+    for (var i = 1; i <= 4; i++) {
         var meanHeaderZero = "Week " + i + " Mean-0"
         var meanHeaderOne = "Week " + i + " Mean-1"
         var stdHeaderZero = "Week " + i + " STD-0"
@@ -195,7 +233,6 @@ function createGraphsForVariable(dataFromExcel, varIndex) {
             meanZero = dataFromExcel[meanHeaderZero][varIndex]
         if (dataFromExcel[meanHeaderOne] != null)
             meanOne = dataFromExcel[meanHeaderOne][varIndex]
-
         if (dataFromExcel[stdHeaderZero] != null)
             stdZero = dataFromExcel[stdHeaderZero][varIndex]
         if (dataFromExcel[stdHeaderOne] != null)
@@ -207,7 +244,7 @@ function createGraphsForVariable(dataFromExcel, varIndex) {
             dataOut.push({ "Mean": meanOne, "STD": stdOne, "DataType": "Mean-1" })
         console.log("week_" + i)
         console.log(dataOut)
-        constructFromData(dataOut, "week_" + i)
+        constructFromData(dataOut, "week_" + i, boundaryBottom, boundaryTop)
     }
 }
 
