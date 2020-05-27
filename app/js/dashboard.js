@@ -170,7 +170,7 @@ uploadForm.addEventListener('submit', e => {
                 if (this.readyState === XMLHttpRequest.DONE && this.status === 200) {
                     var response = JSON.parse(xhr.response)
                     totalData = response.data
-                    createGraphsForVariable(response.data, 19)
+                    createGraphsForVariable(response.data, 0)
                     var variables = document.getElementById("variables")
                     variables.style.display = "inline-block"
                     for (var i = 0; i < response.variableNames.length; i++) {
