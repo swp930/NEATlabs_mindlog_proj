@@ -55,7 +55,7 @@ function constructFromData(data, week, graphBottom, graphTop) {
     // Show the X scale
     var x = d3.scaleBand()
         .range([0, width])
-        .domain(["Mean-0", "Mean-1"])
+        .domain(["High Mental Wellbeing", "Low Mental Wellbeing"])
         .paddingInner(1)
         .paddingOuter(.5)
     svg.append("g")
@@ -118,7 +118,14 @@ function constructFromData(data, week, graphBottom, graphTop) {
         })
         .attr("width", boxWidth)
         .attr("stroke", "black")
-        .style("fill", "#69b3a2")
+        .style("fill", function(d) {
+            console.log("fill color")
+            console.log(d)
+            if (d.key === "High Mental Wellbeing")
+                return "#009688"
+            else
+                return "#2196f3"
+        })
 
     // Show the median
     svg
@@ -181,7 +188,7 @@ uploadForm.addEventListener('submit', e => {
                     }
                     variables.onchange = (event) => handleChange(event)
 
-                    //Mean: 34.23, STD: 334.1471815848238, DataType: "Mean-0"
+                    //Mean: 34.23, STD: 334.1471815848238, DataType: "High Mental Wellbeing"
                 }
             }
             xhr.send();
@@ -239,9 +246,9 @@ function createGraphsForVariable(dataFromExcel, varIndex) {
             stdOne = dataFromExcel[stdHeaderOne][varIndex]
         var dataOut = []
         if (meanZero != null && stdZero != null)
-            dataOut.push({ "Mean": meanZero, "STD": stdZero, "DataType": "Mean-0" })
+            dataOut.push({ "Mean": meanZero, "STD": stdZero, "DataType": "High Mental Wellbeing" })
         if (meanOne != null && stdOne != null)
-            dataOut.push({ "Mean": meanOne, "STD": stdOne, "DataType": "Mean-1" })
+            dataOut.push({ "Mean": meanOne, "STD": stdOne, "DataType": "Low Mental Wellbeing" })
         console.log("week_" + i)
         console.log(dataOut)
         constructFromData(dataOut, "week_" + i, boundaryBottom, boundaryTop)
