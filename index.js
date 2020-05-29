@@ -122,4 +122,24 @@ app.get('/getDataFromSheet', function(req, res) {
     }
 })
 
+app.get('/getSheetData', function(req, res) {
+    var fileName = req.query.fileName
+    var path_string = "./app/uploads/" + fileName
+    console.log(path_string)
+    if (fs.existsSync(path_string)) {
+        if (fs.lstatSync(path_string).isFile())
+            res.send(extractDataFromExcel(path_string))
+    } else {
+        res.send({ "error": "file not found" })
+    }
+})
+
+app.get('/getSheets', function(req, res) {
+    var dirName = './app/uploads'
+    fs.readdir(dirName, (err, files) => {
+        res.send({ "files": files })
+    });
+
+})
+
 app.listen(port, () => { console.log("Running on port:", port) })

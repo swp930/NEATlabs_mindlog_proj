@@ -7,18 +7,25 @@
     <h1>NEATLabs Mindlog project</h1>
 
     <script src="https://d3js.org/d3.v4.js"></script>
+    <!--
     <form action="/stats" enctype="multipart/form-data" method="post" id="upload_file_form">
         <div class="form-group">
             <input type="file" class="form-control-file" name="uploaded_file" id="uploaded_file">
             <input type="submit" class="btn btn-default">
         </div>
     </form>
+    -->
+    <div>Available sheets</div>
+    <div id="sheetsList"></div>
+    <h3 id="currentSheet"></h3>
     <select id="variables" style="display:none;">
-      </select>
-    <div id="week_1"></div>
-    <div id="week_2"></div>
-    <div id="week_3"></div>
-    <div id="week_4"></div>
+    </select>
+    <div id="weeks_container" style="display:flex;">
+        <div id="week_1"></div>
+        <div id="week_2"></div>
+        <div id="week_3"></div>
+        <div id="week_4"></div>
+    </div>
     <script src="/js/dashboard.js"></script>
     <!-- Create a div where the graph will take place -->
 

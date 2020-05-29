@@ -10,6 +10,60 @@ var margin = {
 
 // append the svg object to the body of the page
 
+getSheets()
+
+function getSheets() {
+    var xhr = new XMLHttpRequest();
+    var url = "/getSheets"
+    xhr.open("GET", url, true);
+    xhr.onreadystatechange = function() { // Call a function when the state changes.
+        if (this.readyState === XMLHttpRequest.DONE && this.status === 200) {
+            var response = JSON.parse(xhr.response)
+            console.log(response)
+            var sheetsListContainer = document.getElementById("sheetsList")
+            response.files.forEach(x => {
+                var button = document.createElement("button")
+                button.innerHTML = x
+                sheetsListContainer.appendChild(button)
+                button.onclick = function() {
+                    submitSheet(x)
+                    document.getElementById("currentSheet").innerHTML = x
+                }
+            })
+        }
+    }
+    xhr.send();
+}
+
+function submitSheet(sheetName) {
+    var xhr = new XMLHttpRequest();
+    var url = "/getSheetData?fileName=" + sheetName
+    xhr.open("GET", url, true);
+    xhr.onreadystatechange = function() { // Call a function when the state changes.
+        if (this.readyState === XMLHttpRequest.DONE && this.status === 200) {
+            var response = JSON.parse(xhr.response)
+            if (response.error) {
+                alert("File not found")
+            } else {
+                console.log(response)
+                totalData = response.data
+                createGraphsForVariable(response.data, 0)
+                var variables = document.getElementById("variables")
+                variables.innerHTML = ""
+                variables.style.display = "inline-block"
+                for (var i = 0; i < response.variableNames.length; i++) {
+                    var option = document.createElement("option")
+                    option.value = i
+                    option.innerHTML = response.variableNames[i]
+                    variables.appendChild(option)
+                }
+                variables.onchange = (event) => handleChange(event)
+            }
+        }
+    }
+    xhr.send();
+}
+
 function constructFromData(data, week, graphBottom, graphTop) {
     document.getElementById(week).innerHTML = ""
     var svg = d3.select("#" + week)
@@ -34,8 +88,6 @@ function constructFromData(data, week, graphBottom, graphTop) {
             median = d[0].Mean
             q3 = d[0].Mean + d[0].STD
             interQuantileRange = q3 - q1
-                //min = q1 - 1.5 * interQuantileRange
-                //max = q3 + 1.5 * interQuantileRange
             var dist = graphTop - graphBottom
             min = graphBottom + (dist * 0.05)
             max = graphTop - (dist * 0.05)
@@ -47,7 +99,8 @@ function constructFromData(data, week, graphBottom, graphTop) {
                 q3: q3,
                 interQuantileRange: interQuantileRange,
                 min: min,
-                max: max
+                max: max,
+                whitney: d[0].Whitney
             })
         })
         .entries(data)
@@ -63,8 +116,6 @@ function constructFromData(data, week, graphBottom, graphTop) {
         .call(d3.axisBottom(x))
 
     // Show the Y scale
-    console.log(graphBottom)
-    console.log(graphTop)
     var y = d3.scaleLinear()
         .domain([graphBottom - 1, graphTop + 1])
         .range([height, 0])
@@ -78,27 +129,6 @@ function constructFromData(data, week, graphBottom, graphTop) {
         .style("font-size", "18px")
         //.style("text-decoration", "underline")  
         .text(week);
-
-    // Show the main vertical line
-    svg
-        .selectAll("vertLines")
-        .data(sumstat)
-        .enter()
-        .append("line")
-        .attr("x1", function(d) {
-            return (x(d.key))
-        })
-        .attr("x2", function(d) {
-            return (x(d.key))
-        })
-        .attr("y1", function(d) {
-            return (y(d.value.min))
-        })
-        .attr("y2", function(d) {
-            return (y(d.value.max))
-        })
-        .attr("stroke", "black")
-        .style("width", 40)
 
     // rectangle for the main box
     var boxWidth = 100
@@ -117,10 +147,19 @@ function constructFromData(data, week, graphBottom, graphTop) {
             return (y(d.value.q1) - y(d.value.q3))
         })
         .attr("width", boxWidth)
-        .attr("stroke", "black")
-        .style("fill", function(d) {
-            console.log("fill color")
+        .attr("stroke", function(d) {
+            console.log("stroke color")
             console.log(d)
+            console.log(d.value)
+            console.log(d.value.whitney)
+            if (d.value.whitney <= 0.05)
+                return "red"
+            else
+                return "black"
+        })
+        .attr("stroke-width", "2px")
+        .style("fill", function(d) {
+
             if (d.key === "High Mental Wellbeing")
                 return "#009688"
             else
@@ -179,6 +218,7 @@ uploadForm.addEventListener('submit', e => {
                     totalData = response.data
                     createGraphsForVariable(response.data, 0)
                     var variables = document.getElementById("variables")
+                    variables.innerHTML = ""
                     variables.style.display = "inline-block"
                     for (var i = 0; i < response.variableNames.length; i++) {
                         var option = document.createElement("option")
@@ -227,15 +267,13 @@ function createGraphsForVariable(dataFromExcel, varIndex) {
         }
     }
 
-    console.log(boundaryBottom)
-    console.log(boundaryTop)
-
     for (var i = 1; i <= 4; i++) {
         var meanHeaderZero = "Week " + i + " Mean-0"
         var meanHeaderOne = "Week " + i + " Mean-1"
         var stdHeaderZero = "Week " + i + " STD-0"
         var stdHeaderOne = "Week " + i + " STD-1"
-        var stdZero, stdOne, meanZero, meanOne
+        var whitneyHeader = "Week " + i + " Whitney U"
+        var stdZero, stdOne, meanZero, meanOne, whitney
         if (dataFromExcel[meanHeaderZero] != null)
             meanZero = dataFromExcel[meanHeaderZero][varIndex]
         if (dataFromExcel[meanHeaderOne] != null)
@@ -244,19 +282,19 @@ function createGraphsForVariable(dataFromExcel, varIndex) {
             stdZero = dataFromExcel[stdHeaderZero][varIndex]
         if (dataFromExcel[stdHeaderOne] != null)
             stdOne = dataFromExcel[stdHeaderOne][varIndex]
+        if (dataFromExcel[whitneyHeader] != null)
+            whitney = dataFromExcel[whitneyHeader][varIndex]
         var dataOut = []
         if (meanZero != null && stdZero != null)
-            dataOut.push({ "Mean": meanZero, "STD": stdZero, "DataType": "High Mental Wellbeing" })
+            dataOut.push({ "Mean": meanZero, "STD": stdZero, "DataType": "High Mental Wellbeing", "Whitney": whitney })
         if (meanOne != null && stdOne != null)
-            dataOut.push({ "Mean": meanOne, "STD": stdOne, "DataType": "Low Mental Wellbeing" })
+            dataOut.push({ "Mean": meanOne, "STD": stdOne, "DataType": "Low Mental Wellbeing", "Whitney": whitney })
         console.log("week_" + i)
-        console.log(dataOut)
         constructFromData(dataOut, "week_" + i, boundaryBottom, boundaryTop)
     }
 }
 
 function handleChange(event) {
-    console.log(event.srcElement.options.selectedIndex)
     var selectedIndex = event.srcElement.options.selectedIndex
     createGraphsForVariable(totalData, selectedIndex)
 }
