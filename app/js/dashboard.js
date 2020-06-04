@@ -3,10 +3,10 @@ var margin = {
         top: 10,
         right: 30,
         bottom: 30,
-        left: 50
+        left: 40
     },
-    width = 460 - margin.left - margin.right,
-    height = 400 - margin.top - margin.bottom;
+    width = 340 - margin.left - margin.right,
+    height = 300 - margin.top - margin.bottom;
 
 // append the svg object to the body of the page
 
@@ -19,7 +19,6 @@ function getSheets() {
     xhr.onreadystatechange = function() { // Call a function when the state changes.
         if (this.readyState === XMLHttpRequest.DONE && this.status === 200) {
             var response = JSON.parse(xhr.response)
-            console.log(response)
             var sheetsListContainer = document.getElementById("sheetsList")
             response.files.forEach(x => {
                 var button = document.createElement("button")
@@ -45,9 +44,30 @@ function submitSheet(sheetName) {
             if (response.error) {
                 alert("File not found")
             } else {
-                console.log(response)
                 totalData = response.data
-                createGraphsForVariable(response.data, 0)
+
+                var variablesContainer = document.getElementById("variables_container")
+                console.log(variablesContainer)
+                for (var j = 0; j < response.variableNames.length; j++) {
+                    //for (var j = 0; j < 1; j++) {
+                    var varNum = j
+                    var weeksContainerId = "weeks_container_" + varNum
+                    var weeksContainer = document.createElement('div')
+                    weeksContainer.style.display = "flex"
+                    weeksContainer.id = weeksContainerId
+                    variablesContainer.appendChild(weeksContainer)
+                    for (var i = 1; i <= 4; i++) {
+                        var weekNum = i
+                        var weekId = "week_" + weekNum + "_" + response.variableNames[varNum]
+                        var weekVar = document.createElement("div")
+                        weekVar.id = weekId
+                        weeksContainer.appendChild(weekVar)
+                    }
+
+                    createGraphsForVariable(response.data, j, response.variableNames)
+                }
+
+                /*
                 var variables = document.getElementById("variables")
                 variables.innerHTML = ""
                 variables.style.display = "inline-block"
@@ -58,6 +78,7 @@ function submitSheet(sheetName) {
                     variables.appendChild(option)
                 }
                 variables.onchange = (event) => handleChange(event)
+                */
             }
         }
     }
@@ -121,15 +142,6 @@ function constructFromData(data, week, graphBottom, graphTop) {
         .range([height, 0])
     svg.append("g").call(d3.axisLeft(y))
 
-    // add a title
-    svg.append("text")
-        .attr("x", (width / 2))
-        .attr("y", 0 + (margin.top / 2))
-        .attr("text-anchor", "middle")
-        .style("font-size", "18px")
-        //.style("text-decoration", "underline")  
-        .text(week);
-
     // rectangle for the main box
     var boxWidth = 100
     svg
@@ -138,33 +150,45 @@ function constructFromData(data, week, graphBottom, graphTop) {
         .enter()
         .append("rect")
         .attr("x", function(d) {
+            console.log("xval")
+            console.log((x(d.key) - boxWidth / 2))
             return (x(d.key) - boxWidth / 2)
         })
         .attr("y", function(d) {
+            console.log("yval")
+            console.log(y(d.value.q3))
             return (y(d.value.q3))
         })
         .attr("height", function(d) {
+            console.log("height")
+            console.log(y(d.value.q1) - y(d.value.q3))
             return (y(d.value.q1) - y(d.value.q3))
         })
         .attr("width", boxWidth)
-        .attr("stroke", function(d) {
-            console.log("stroke color")
-            console.log(d)
-            console.log(d.value)
-            console.log(d.value.whitney)
-            if (d.value.whitney <= 0.05)
-                return "red"
-            else
-                return "black"
-        })
+        .attr("stroke", "black")
         .attr("stroke-width", "2px")
         .style("fill", function(d) {
-
             if (d.key === "High Mental Wellbeing")
                 return "#009688"
             else
                 return "#2196f3"
         })
+
+    if (data[0].Whitney <= 0.05) {
+        // Rectange for whitney check
+        svg
+            .selectAll()
+            .data(sumstat)
+            .enter()
+            .append("rect")
+            .attr("x", 12)
+            .attr("y", 30)
+            .attr("height", 220)
+            .attr("width", 248)
+            .attr("stroke", "red")
+            .attr("stroke-width", "2px")
+            .style("fill", "none")
+    }
 
     // Show the median
     svg
@@ -190,53 +214,7 @@ function constructFromData(data, week, graphBottom, graphTop) {
 
 var totalData
 
-var uploadForm = document.getElementById("upload_file_form")
-uploadForm.addEventListener('submit', e => {
-    e.preventDefault()
-    var files = document.getElementById('uploaded_file').files;
-    const formData = new FormData();
-    for (let i = 0; i < files.length; i++) {
-        let file = files[i]
-
-        formData.append('uploaded_file', file)
-    }
-    var url = '/stats'
-    fetch(url, {
-        method: 'POST',
-        body: formData,
-    }).then(response => {
-        var reader = response.body.getReader()
-        reader.read().then(function processText({ done, value }) {
-            var string = new TextDecoder("utf-8").decode(value);
-            var resp = JSON.parse(string)
-            var xhr = new XMLHttpRequest();
-            var url = "/getDataFromSheet?path=" + resp.path
-            xhr.open("GET", url, true);
-            xhr.onreadystatechange = function() { // Call a function when the state changes.
-                if (this.readyState === XMLHttpRequest.DONE && this.status === 200) {
-                    var response = JSON.parse(xhr.response)
-                    totalData = response.data
-                    createGraphsForVariable(response.data, 0)
-                    var variables = document.getElementById("variables")
-                    variables.innerHTML = ""
-                    variables.style.display = "inline-block"
-                    for (var i = 0; i < response.variableNames.length; i++) {
-                        var option = document.createElement("option")
-                        option.value = i
-                        option.innerHTML = response.variableNames[i]
-                        variables.appendChild(option)
-                    }
-                    variables.onchange = (event) => handleChange(event)
-
-                    //Mean: 34.23, STD: 334.1471815848238, DataType: "High Mental Wellbeing"
-                }
-            }
-            xhr.send();
-        })
-    })
-})
-
-function createGraphsForVariable(dataFromExcel, varIndex) {
+function createGraphsForVariable(dataFromExcel, varIndex, variableNames) {
     var boundaryBottom = Number.MAX_SAFE_INTEGER,
         boundaryTop = Number.MIN_SAFE_INTEGER
     for (var j = 1; j <= 4; j++) {
@@ -289,8 +267,7 @@ function createGraphsForVariable(dataFromExcel, varIndex) {
             dataOut.push({ "Mean": meanZero, "STD": stdZero, "DataType": "High Mental Wellbeing", "Whitney": whitney })
         if (meanOne != null && stdOne != null)
             dataOut.push({ "Mean": meanOne, "STD": stdOne, "DataType": "Low Mental Wellbeing", "Whitney": whitney })
-        console.log("week_" + i)
-        constructFromData(dataOut, "week_" + i, boundaryBottom, boundaryTop)
+        constructFromData(dataOut, "week_" + i + "_" + variableNames[varIndex], boundaryBottom, boundaryTop)
     }
 }
 
