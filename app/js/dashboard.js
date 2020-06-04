@@ -174,6 +174,15 @@ function constructFromData(data, week, graphBottom, graphTop) {
                 return "#2196f3"
         })
 
+    // add a title
+    svg.append("text")
+        .attr("x", (width / 2))
+        .attr("y", 0 + (margin.top / 2))
+        .attr("text-anchor", "middle")
+        .style("font-size", "18px")
+        //.style("text-decoration", "underline")  
+        .text(week);
+
     if (data[0].Whitney <= 0.05) {
         // Rectange for whitney check
         svg
