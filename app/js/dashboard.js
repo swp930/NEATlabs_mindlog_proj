@@ -169,9 +169,9 @@ function constructFromData(data, week, graphBottom, graphTop) {
         .attr("stroke-width", "2px")
         .style("fill", function(d) {
             if (d.key === "High Mental Wellbeing")
-                return "#4caf50"
+                return "#1b5e20"
             else
-                return "#f44336"
+                return "#b71c1c"
         })
 
     // add a title
@@ -194,7 +194,7 @@ function constructFromData(data, week, graphBottom, graphTop) {
             .attr("y", 30)
             .attr("height", 220)
             .attr("width", 248)
-            .attr("stroke", "red")
+            .attr("stroke", "#03a9f4")
             .attr("stroke-width", "2px")
             .style("fill", "none")
     }
