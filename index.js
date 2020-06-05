@@ -24,6 +24,18 @@ function extractDataFromExcel(path) {
     var wb = XLSX.read(buf, { type: 'buffer' });
 
     var weeks = ["1", "2", "3", "4"]
+    console.log(wb.Sheets.weekly_summary['!ref'])
+    var varNames = wb.Sheets.weekly_summary['!ref'].split(':')
+    var startingVarInd = parseInt(varNames[0].split('A')[1])
+    var endingVarInd = parseInt(varNames[1].split('AL')[1])
+    var varNameValues = []
+    for (var i = startingVarInd + 1; i <= endingVarInd; i++) {
+        var key = 'A' + i
+        console.log(key)
+        varNameValues.push(wb.Sheets.weekly_summary[key].v)
+    }
+    console.log(varNameValues)
+    console.log(startingVarInd, endingVarInd)
     var validBoxes = Object.keys(wb.Sheets.weekly_summary)
     var headers = {}
     for (var i = 0; i < weeks.length; i++) {
@@ -58,17 +70,13 @@ function extractDataFromExcel(path) {
         }
     }
     var validHeaders = Object.keys(headersToBox)
-    console.log(validHeaders)
-    console.log(headersToBox)
     var data = {}
     for (var i = 0; i < validHeaders.length; i++) {
         var currHead = headersToBox[validHeaders[i]]
-        console.log(currHead)
         var regex = /([\A-Za-z]*)[\d]*/
         var tmp = currHead.match(regex)
         if (tmp[1]) {
             var alpha = tmp[1]
-            console.log(alpha)
             data[validHeaders[i]] = []
             for (var j = 2; j <= 26; j++) {
                 var boxName = alpha + j
@@ -79,17 +87,16 @@ function extractDataFromExcel(path) {
             }
         }
     }
-    console.log(data)
 
-    var variableNames = [
+    /*var variableNames = [
         "prev_night_sleep", "ppg_std", "cumm_step_distance", "cumm_step_speed", "curr_step_speed", "cumm_step_calorie", "fats",
         "cumm_step_count", "heart_rate", "MeanBreathingTime", "Consistency", "sugars", "past_day_fats", "time_of_day",
         "exercise_calorie", "curr_step_count", "exercise_duration", "past_day_sugars", "curr_step_calorie", "curr_step_distance",
         "past_day_caffeine", "caffeine", "noise", "distracted", "Speed"
-    ]
+    ]*/
     var body = {
         "data": data,
-        "variableNames": variableNames
+        "variableNames": varNameValues
     }
     return body
 }
@@ -106,7 +113,6 @@ app.get('/', function(req, res) {
 app.post('/stats', upload.single('uploaded_file'), function(req, res) {
     // req.file is the name of your file in the form above, here 'uploaded_file'
     // req.body will hold the text fields, if there were any 
-    console.log(req.file, req.body)
     res.send({
         "completed": true,
         "path": req.file.path
@@ -125,7 +131,6 @@ app.get('/getDataFromSheet', function(req, res) {
 app.get('/getSheetData', function(req, res) {
     var fileName = req.query.fileName
     var path_string = "./app/uploads/" + fileName
-    console.log(path_string)
     if (fs.existsSync(path_string)) {
         if (fs.lstatSync(path_string).isFile())
             res.send(extractDataFromExcel(path_string))
