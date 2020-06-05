@@ -12,6 +12,8 @@ var margin = {
 
 getSheets()
 
+var sheets
+
 function getSheets() {
     var xhr = new XMLHttpRequest();
     var url = "/getSheets"
@@ -19,19 +21,57 @@ function getSheets() {
     xhr.onreadystatechange = function() { // Call a function when the state changes.
         if (this.readyState === XMLHttpRequest.DONE && this.status === 200) {
             var response = JSON.parse(xhr.response)
-            var sheetsListContainer = document.getElementById("sheetsList")
-            response.files.forEach(x => {
-                var button = document.createElement("button")
-                button.innerHTML = x
-                sheetsListContainer.appendChild(button)
-                button.onclick = function() {
-                    submitSheet(x)
-                    document.getElementById("currentSheet").innerHTML = x
-                }
-            })
+            sheets = response.files
         }
     }
     xhr.send();
+}
+
+function handleLogIn() {
+    var useridElem = document.getElementById("userid")
+    var userid = useridElem.value
+    var passwordElem = document.getElementById("userpassword")
+    var password = passwordElem.value
+    var loginElem = document.getElementById("loginbutton")
+    var logoutElem = document.getElementById("logoutbutton")
+    var h3Elem = document.getElementById("currentSheet")
+    console.log(userid, password)
+    var fileToGet = userid + '.xlsx'
+    var fileFound = false
+    for (var i = 0; i < sheets.length; i++) {
+        if (sheets[i] === fileToGet) {
+            fileFound = true
+            break
+        }
+    }
+    if (!fileFound)
+        alert("Cannot find user")
+    else {
+        h3Elem.innerHTML = userid
+        useridElem.style.display = "none"
+        passwordElem.style.display = "none"
+        loginElem.style.display = "none"
+        logoutElem.style.display = "inline-block"
+        submitSheet(fileToGet)
+    }
+
+}
+
+function handleLogOut() {
+    var useridElem = document.getElementById("userid")
+    var passwordElem = document.getElementById("userpassword")
+    var loginElem = document.getElementById("loginbutton")
+    var logoutElem = document.getElementById("logoutbutton")
+    var varElem = document.getElementById("variables_container")
+    var h3Elem = document.getElementById("currentSheet")
+    useridElem.value = ""
+    useridElem.style.display = "inline-block"
+    passwordElem.value = ""
+    passwordElem.style.display = "inline-block"
+    loginElem.style.display = "inline-block"
+    logoutElem.style.display = "none"
+    varElem.innerHTML = ""
+    h3Elem.innerHTML = ""
 }
 
 function submitSheet(sheetName) {

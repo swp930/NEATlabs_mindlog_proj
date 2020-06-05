@@ -4,41 +4,27 @@
 <head></head>
 
 <body>
-    <h1>NEATLabs Mindlog project</h1>
+    <div style="display: flex;">
+        <img src="res/logo.jpg" width="50px" height="40px">
+        <div style="font-size: 40px; font-weight: medium; font-family: Helvetica; margin-left: 5px; color:#607d8b;">NEATLabs MyMH</div>
+    </div>
 
     <script src="https://d3js.org/d3.v4.js"></script>
-    <!--
-    <form action="/stats" enctype="multipart/form-data" method="post" id="upload_file_form">
-        <div class="form-group">
-            <input type="file" class="form-control-file" name="uploaded_file" id="uploaded_file">
-            <input type="submit" class="btn btn-default">
-        </div>
-    </form>
-    -->
-    <div>Available sheets</div>
-    <div id="sheetsList"></div>
     <h3 id="currentSheet"></h3>
     <select id="variables" style="display:none;">
     </select>
 
-    <input id="userid" type="text" placeholder="Enter user id">
+    <input id="userid" type="text" placeholder="Enter user id" autocomplete="off">
     <input id="userpassword" type="password" placeholder="Enter password">
-    <button>Log in</button>
+    <button id="loginbutton" onclick="handleLogIn()">Log in</button>
+    <button id="logoutbutton" onclick="handleLogOut()" style="display: none;">Log out</button>
 
     <div id="weeks_container" style="display:flex;">
-        <!--
-        <div id="week_1_0"></div>
-        
-        <div id="week_2_0"></div>
-        <div id="week_3_0"></div>
-        <div id="week_4_0"></div>
-        -->
     </div>
 
     <div id="variables_container">
     </div>
     <script src="/js/dashboard.js"></script>
-    <!-- Create a div where the graph will take place -->
 
 </body>
 
