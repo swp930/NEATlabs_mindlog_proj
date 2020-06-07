@@ -22,6 +22,7 @@ function getSheets() {
         if (this.readyState === XMLHttpRequest.DONE && this.status === 200) {
             var response = JSON.parse(xhr.response)
             sheets = response.files
+                //submitSheet(sheets[0])
         }
     }
     xhr.send();
@@ -35,7 +36,6 @@ function handleLogIn() {
     var loginElem = document.getElementById("loginbutton")
     var logoutElem = document.getElementById("logoutbutton")
     var h3Elem = document.getElementById("currentSheet")
-    console.log(userid, password)
     var fileToGet = userid + '.xlsx'
     var fileFound = false
     for (var i = 0; i < sheets.length; i++) {
@@ -74,6 +74,13 @@ function handleLogOut() {
     h3Elem.innerHTML = ""
 }
 
+/** Variables to ignore */
+var ignoreVariables = ["noise", "distracted", "Speed"]
+
+/**
+ * Retrieves a given sheet and creates graphs for it.
+ * @param {string} sheetName: Excel sheet name on server to visualize
+ */
 function submitSheet(sheetName) {
     var xhr = new XMLHttpRequest();
     var url = "/getSheetData?fileName=" + sheetName
@@ -87,45 +94,42 @@ function submitSheet(sheetName) {
                 totalData = response.data
 
                 var variablesContainer = document.getElementById("variables_container")
-                console.log(variablesContainer)
                 for (var j = 0; j < response.variableNames.length; j++) {
-                    //for (var j = 0; j < 1; j++) {
-                    var varNum = j
-                    var weeksContainerId = "weeks_container_" + varNum
-                    var weeksContainer = document.createElement('div')
-                    weeksContainer.style.display = "flex"
-                    weeksContainer.id = weeksContainerId
-                    variablesContainer.appendChild(weeksContainer)
-                    for (var i = 1; i <= 4; i++) {
-                        var weekNum = i
-                        var weekId = "week_" + weekNum + "_" + response.variableNames[varNum]
-                        var weekVar = document.createElement("div")
-                        weekVar.id = weekId
-                        weeksContainer.appendChild(weekVar)
+                    if (isVariableToIgnore(response.variableNames[j], ignoreVariables)) {
+                        console.log("Ignore this var")
+                    } else {
+                        var varNum = j
+                        var weeksContainerId = "weeks_container_" + varNum
+                        var weeksContainer = document.createElement('div')
+                        weeksContainer.style.display = "flex"
+                        weeksContainer.id = weeksContainerId
+                        variablesContainer.appendChild(weeksContainer)
+                        for (var i = 1; i <= 4; i++) {
+                            var weekNum = i
+                            var weekId = "week_" + weekNum + "_" + response.variableNames[varNum]
+                            var weekVar = document.createElement("div")
+                            weekVar.id = weekId
+                            weeksContainer.appendChild(weekVar)
+                        }
+
+                        createGraphsForVariable(response.data, j, response.variableNames)
                     }
-
-                    createGraphsForVariable(response.data, j, response.variableNames)
                 }
-
-                /*
-                var variables = document.getElementById("variables")
-                variables.innerHTML = ""
-                variables.style.display = "inline-block"
-                for (var i = 0; i < response.variableNames.length; i++) {
-                    var option = document.createElement("option")
-                    option.value = i
-                    option.innerHTML = response.variableNames[i]
-                    variables.appendChild(option)
-                }
-                variables.onchange = (event) => handleChange(event)
-                */
             }
         }
     }
     xhr.send();
 }
 
-function constructFromData(data, week, graphBottom, graphTop) {
+function isVariableToIgnore(varName, ignoreList) {
+    for (var i = 0; i < ignoreList.length; i++) {
+        if (ignoreList[i] === varName)
+            return true
+    }
+    return false
+}
+
+function constructFromData(data, week, graphBottom, graphTop, graphTitle) {
     document.getElementById(week).innerHTML = ""
     var svg = d3.select("#" + week)
         .append("svg")
@@ -190,18 +194,12 @@ function constructFromData(data, week, graphBottom, graphTop) {
         .enter()
         .append("rect")
         .attr("x", function(d) {
-            console.log("xval")
-            console.log((x(d.key) - boxWidth / 2))
             return (x(d.key) - boxWidth / 2)
         })
         .attr("y", function(d) {
-            console.log("yval")
-            console.log(y(d.value.q3))
             return (y(d.value.q3))
         })
         .attr("height", function(d) {
-            console.log("height")
-            console.log(y(d.value.q1) - y(d.value.q3))
             return (y(d.value.q1) - y(d.value.q3))
         })
         .attr("width", boxWidth)
@@ -219,24 +217,38 @@ function constructFromData(data, week, graphBottom, graphTop) {
         .attr("x", (width / 2))
         .attr("y", 0 + (margin.top / 2))
         .attr("text-anchor", "middle")
-        .style("font-size", "18px")
-        //.style("text-decoration", "underline")  
-        .text(week);
+        .style("font-size", "14px")
+        .text(graphTitle);
 
+    var whitneyData = []
+    if (sumstat.length > 0)
+        whitneyData.push(sumstat[0])
     if (data[0].Whitney <= 0.05) {
         // Rectange for whitney check
         svg
             .selectAll()
-            .data(sumstat)
+            .data(whitneyData)
             .enter()
             .append("rect")
             .attr("x", 12)
-            .attr("y", 30)
-            .attr("height", 220)
+            .attr("y", 12)
+            .attr("height", 240)
             .attr("width", 248)
             .attr("stroke", "#03a9f4")
             .attr("stroke-width", "2px")
             .style("fill", "none")
+    } else {
+        svg
+            .selectAll()
+            .data(whitneyData)
+            .enter()
+            .append("rect")
+            .attr("x", 12)
+            .attr("y", 12)
+            .attr("height", 240)
+            .attr("width", 248)
+            .attr("stroke-width", "2px")
+            .style("fill", "rgba(158,158,158, 0.5)")
     }
 
     // Show the median
@@ -314,10 +326,58 @@ function createGraphsForVariable(dataFromExcel, varIndex, variableNames) {
         var dataOut = []
         if (meanZero != null && stdZero != null)
             dataOut.push({ "Mean": meanZero, "STD": stdZero, "DataType": "High Mental Wellbeing", "Whitney": whitney })
+        else if (meanZero != null)
+            dataOut.push({ "Mean": meanZero, "STD": 0, "DataType": "High Mental Wellbeing", "Whitney": whitney })
         if (meanOne != null && stdOne != null)
             dataOut.push({ "Mean": meanOne, "STD": stdOne, "DataType": "Low Mental Wellbeing", "Whitney": whitney })
-        constructFromData(dataOut, "week_" + i + "_" + variableNames[varIndex], boundaryBottom, boundaryTop)
+        else if (meanOne != null)
+            dataOut.push({ "Mean": meanOne, "STD": 0, "DataType": "Low Mental Wellbeing", "Whitney": whitney })
+        var graphTitle = constructTitle(i, variableNames[varIndex])
+        constructFromData(dataOut, "week_" + i + "_" + variableNames[varIndex], boundaryBottom, boundaryTop, graphTitle)
     }
+}
+
+/**
+ * Create title given week number and variable name
+ * @param {*} weekNum: Week number of graph
+ * @param {*} varName: Variable name
+ */
+function constructTitle(weekNum, varName) {
+    var weekPart = "" + weekNum
+    var varPart = varName
+
+    var weeks = {
+        1: "Week 1",
+        2: "Week 1-2",
+        3: "Week 1-3",
+        4: "Week 1-4"
+    }
+
+    if (weeks[weekNum])
+        weekPart = weeks[weekNum]
+
+    var variables = {
+        "cumm_step_count": "Past Half Day Step Count",
+        "cumm_step_distance": "Past Half Day Step Distance",
+        "cumm_step_calorie": "Past Half Day Step Calories",
+        "ppg_std": "Heart Rate Variability (HRV)",
+        "MeanBreathingTime": "Mean Breathing Time",
+        "cumm_step_speed": "Past Half Day Step Speed",
+        "time_of_day": "Time of Day",
+        "prev_night_sleep": "Previous Night's Sleep",
+        "Consistency": "Breathing Consistency",
+        "past_day_fats": "Past Day Fats",
+        "past_day_sugars": "Past Day Sugars",
+        "heart_rate": "Heart Rate",
+        "exercise_duration": "Past Day Exercise Duration",
+        "exercise_calorie": "Past Day Exercise Calories",
+        "past_day_caffeine": "Past Day Caffeine"
+    }
+
+    if (variables[varName])
+        varPart = variables[varName]
+
+    return weekPart + " " + varPart
 }
 
 function handleChange(event) {
