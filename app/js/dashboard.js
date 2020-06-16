@@ -223,7 +223,33 @@ function constructFromData(data, week, graphBottom, graphTop, graphTitle) {
     var whitneyData = []
     if (sumstat.length > 0)
         whitneyData.push(sumstat[0])
-    if (data[0].Whitney <= 0.05) {
+    var meanBottom1, meanBottom2, meanTop1, meanTop2
+    var similarBottom, similarTop
+    console.log(data)
+    /*0:
+        DataType: "High Mental Wellbeing"
+        Mean: 1369
+        STD: 2898.186656325289
+        Whitney: 0.2029324797341356
+    1:
+        DataType: "Low Mental Wellbeing"
+        Mean: 384
+        STD: 265.5811238272279
+        Whitney: 0.2029324797341356*/
+    if(data.length == 2) {
+        if(data[0].Mean != null && data[0].STD != null) {
+            meanBottom1 = data[0].Mean - data[0].STD
+            meanTop1 = data[0].Mean + data[0].STD
+        }
+        if(data[1].Mean != null && data[1].STD != null) {
+            meanBottom2 = data[1].Mean - data[1].STD
+            meanTop2 = data[1].Mean + data[1].STD
+        }
+        similarBottom = Math.abs((meanBottom1 - meanBottom2)/meanBottom1) < 0.05
+        similarTop = Math.abs((meanTop1 - meanTop2)/meanTop1) < 0.05
+    }
+    
+    if (data[0].Whitney <= 0.05 && !(similarBottom || similarTop)) {
         // Rectange for whitney check
         svg
             .selectAll()
@@ -248,7 +274,7 @@ function constructFromData(data, week, graphBottom, graphTop, graphTitle) {
             .attr("height", 240)
             .attr("width", 248)
             .attr("stroke-width", "2px")
-            .style("fill", "rgba(158,158,158, 0.5)")
+            .style("fill", "rgba(33,33,33, 0.9)")
     }
 
     // Show the median
