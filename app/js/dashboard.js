@@ -225,6 +225,7 @@ function constructFromData(data, week, graphBottom, graphTop, graphTitle) {
         whitneyData.push(sumstat[0])
     var meanBottom1, meanBottom2, meanTop1, meanTop2
     var similarBottom, similarTop
+    var similarMeans
     console.log(data)
     /*0:
         DataType: "High Mental Wellbeing"
@@ -245,11 +246,13 @@ function constructFromData(data, week, graphBottom, graphTop, graphTitle) {
             meanBottom2 = data[1].Mean - data[1].STD
             meanTop2 = data[1].Mean + data[1].STD
         }
-        similarBottom = Math.abs((meanBottom1 - meanBottom2)/meanBottom1) < 0.05
-        similarTop = Math.abs((meanTop1 - meanTop2)/meanTop1) < 0.05
+        
+        similarBottom = Math.abs((meanBottom1 - meanBottom2)/(Math.max(meanBottom1, meanBottom2, 0.01))) < 0.05
+        similarTop = Math.abs((meanTop1 - meanTop2)/Math.max(meanTop1, meanTop2, 0.01)) < 0.05
+        similarMeans = Math.abs((data[0].Mean - data[1].Mean)/Math.max(data[0].Mean, data[1].Mean, 0.01)) < 0.05
     }
     
-    if (data[0].Whitney <= 0.05 && !(similarBottom || similarTop)) {
+    if (data[0].Whitney <= 0.05 && !(similarBottom || similarTop || similarMeans)) {
         // Rectange for whitney check
         svg
             .selectAll()
