@@ -10,25 +10,30 @@ var fs = require('fs')
 var storage = multer.diskStorage({
     destination: './app/uploads/',
     filename: function(req, file, cb) {
-        //req.body is empty...
-        //How could I get the new_file_name property sent from client here?
-        //cb(null, file.originalname + '-' + Date.now());
         cb(null, file.originalname);
     }
 });
 var upload = multer({ storage: storage });
 
+/**
+ * Given a path to the excel file on the server extract the data for the Means, STD and Whitney values 
+ * @param {*} path 
+ */
 function extractDataFromExcel(path) {
-    //var buf = fs.readFileSync("app/uploads/ucsd12.xlsx");
     var buf = fs.readFileSync(path);
+
+    // Create excel workbook
     var wb = XLSX.read(buf, { type: 'buffer' });
 
+    // List of weeks to read from 
     var weeks = ["1", "2", "3", "4"]
     console.log(wb.Sheets.weekly_summary['!ref'])
     var varNames = wb.Sheets.weekly_summary['!ref'].split(':')
     var startingVarInd = parseInt(varNames[0].split('A')[1])
     var endingVarInd = parseInt(varNames[1].split('AL')[1])
     var varNameValues = []
+
+    // Extract list of variable names
     for (var i = startingVarInd + 1; i <= endingVarInd; i++) {
         var key = 'A' + i
         console.log(key)
@@ -38,6 +43,8 @@ function extractDataFromExcel(path) {
     console.log(startingVarInd, endingVarInd)
     var validBoxes = Object.keys(wb.Sheets.weekly_summary)
     var headers = {}
+
+    // Create a dictionary of available headers
     for (var i = 0; i < weeks.length; i++) {
         var weekNum = weeks[i]
         var header1 = "Week " + weekNum + " Mean-0"
@@ -51,6 +58,8 @@ function extractDataFromExcel(path) {
         headers[header4] = true
         headers[header5] = true
     }
+
+    // Create a dictionary mapping headers to the values from the Excel sheet
     var headersToBox = {}
     for (var i = 0; i < validBoxes.length; i++) {
         var x = validBoxes[i]
@@ -69,6 +78,7 @@ function extractDataFromExcel(path) {
             }
         }
     }
+
     var validHeaders = Object.keys(headersToBox)
     var data = {}
     for (var i = 0; i < validHeaders.length; i++) {
@@ -88,12 +98,6 @@ function extractDataFromExcel(path) {
         }
     }
 
-    /*var variableNames = [
-        "prev_night_sleep", "ppg_std", "cumm_step_distance", "cumm_step_speed", "curr_step_speed", "cumm_step_calorie", "fats",
-        "cumm_step_count", "heart_rate", "MeanBreathingTime", "Consistency", "sugars", "past_day_fats", "time_of_day",
-        "exercise_calorie", "curr_step_count", "exercise_duration", "past_day_sugars", "curr_step_calorie", "curr_step_distance",
-        "past_day_caffeine", "caffeine", "noise", "distracted", "Speed"
-    ]*/
     var body = {
         "data": data,
         "variableNames": varNameValues
@@ -103,6 +107,9 @@ function extractDataFromExcel(path) {
 
 app.use(express.static(__dirname + '/app'))
 
+/**
+ * Route for dashboard.html
+ */
 app.get('/', function(req, res) {
     var options = {
         root: path.join(__dirname, "app")
@@ -128,6 +135,9 @@ app.get('/getDataFromSheet', function(req, res) {
     }
 })
 
+/**
+ * Extracts data from given sheet name 
+ */
 app.get('/getSheetData', function(req, res) {
     var fileName = req.query.fileName
     var path_string = "./app/uploads/" + fileName

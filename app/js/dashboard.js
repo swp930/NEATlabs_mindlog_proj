@@ -10,10 +10,14 @@ var margin = {
 
 // append the svg object to the body of the page
 
+
 getSheets()
 
 var sheets
 
+/**
+ * Get list of sheets available in the server
+ */
 function getSheets() {
     var xhr = new XMLHttpRequest();
     var url = "/getSheets"
@@ -21,13 +25,17 @@ function getSheets() {
     xhr.onreadystatechange = function() { // Call a function when the state changes.
         if (this.readyState === XMLHttpRequest.DONE && this.status === 200) {
             var response = JSON.parse(xhr.response)
+            // Save available amount of sheets 
             sheets = response.files
-                //submitSheet(sheets[0])
         }
     }
     xhr.send();
 }
 
+/**
+ * Handles log in flow. Gets userid and password and returns the sheet with the userid.
+ * Currently doesn't do any authentication and doesn't need a password to login. 
+ */
 function handleLogIn() {
     var useridElem = document.getElementById("userid")
     var userid = useridElem.value
@@ -57,6 +65,9 @@ function handleLogIn() {
 
 }
 
+/**
+ * Clears all graphs currently displayed and brings the user id and password forms back
+ */
 function handleLogOut() {
     var useridElem = document.getElementById("userid")
     var passwordElem = document.getElementById("userpassword")
@@ -121,6 +132,11 @@ function submitSheet(sheetName) {
     xhr.send();
 }
 
+/**
+ * Checks whether the given variable name is in the list of variables to ignore
+ * @param {*} varName 
+ * @param {*} ignoreList 
+ */
 function isVariableToIgnore(varName, ignoreList) {
     for (var i = 0; i < ignoreList.length; i++) {
         if (ignoreList[i] === varName)
@@ -129,6 +145,14 @@ function isVariableToIgnore(varName, ignoreList) {
     return false
 }
 
+/**
+ * Constructs the graph given the data, graph title, week, and limits for the graph
+ * @param {*} data 
+ * @param {*} week 
+ * @param {*} graphBottom 
+ * @param {*} graphTop 
+ * @param {*} graphTitle 
+ */
 function constructFromData(data, week, graphBottom, graphTop, graphTitle) {
     document.getElementById(week).innerHTML = ""
     var svg = d3.select("#" + week)
@@ -158,6 +182,8 @@ function constructFromData(data, week, graphBottom, graphTop, graphTitle) {
             max = graphTop - (dist * 0.05)
             bottomDomain = Math.min(bottomDomain, min)
             upperDomain = Math.max(upperDomain, max)
+            // The box plot isn't exactly a box plot it only has lines at the medians and the bottom and top edges of the box are defined by 
+            // subtracting the STD from the Mean
             return ({
                 q1: q1,
                 median: median,
@@ -227,16 +253,6 @@ function constructFromData(data, week, graphBottom, graphTop, graphTitle) {
     var similarBottom, similarTop
     var similarMeans
     console.log(data)
-    /*0:
-        DataType: "High Mental Wellbeing"
-        Mean: 1369
-        STD: 2898.186656325289
-        Whitney: 0.2029324797341356
-    1:
-        DataType: "Low Mental Wellbeing"
-        Mean: 384
-        STD: 265.5811238272279
-        Whitney: 0.2029324797341356*/
     if(data.length == 2) {
         if(data[0].Mean != null && data[0].STD != null) {
             meanBottom1 = data[0].Mean - data[0].STD
@@ -304,6 +320,13 @@ function constructFromData(data, week, graphBottom, graphTop, graphTitle) {
 
 var totalData
 
+/**
+ * After retrieving the data from the Excel sheet, data is sent to this method with the specific variable list and a list of variable 
+ * names
+ * @param {*} dataFromExcel 
+ * @param {*} varIndex 
+ * @param {*} variableNames 
+ */
 function createGraphsForVariable(dataFromExcel, varIndex, variableNames) {
     var boundaryBottom = Number.MAX_SAFE_INTEGER,
         boundaryTop = Number.MIN_SAFE_INTEGER
@@ -407,9 +430,4 @@ function constructTitle(weekNum, varName) {
         varPart = variables[varName]
 
     return weekPart + " " + varPart
-}
-
-function handleChange(event) {
-    var selectedIndex = event.srcElement.options.selectedIndex
-    createGraphsForVariable(totalData, selectedIndex)
 }
