@@ -12,7 +12,7 @@ Make sure you have the heroku cli and then use: ```heroku login``` to sign in wi
 
 To update the code base: ```git push heroku master```
 
-Overall Logic
+## Overall Logic
 * Add Excel file in ```app/uploads```
 * Client side code in ```app/js/dashboard.js```
 * Server side code in ```index.js```
